@@ -11,7 +11,7 @@ Open Powershell in the repo's root folder and run  `.build/win/PumbFishingSiteBr
 
 
 ## Dev run
-Run following script under `./src/PumbFishingSiteBreaker` folder: `dotnet run .`.
+Run following script under `./src/PumbFishingSiteBreaker` folder: `dotnet run`.
 
 ## Build
 1. Version for MacOS:

